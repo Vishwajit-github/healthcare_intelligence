@@ -63,29 +63,29 @@ The API layer owns request intake and file handling. LangGraph owns workflow sta
 
 ---
 
-## 6. Supervisor-Centered Agent Topology
+## 6. Supervisor-Led Orchestration
 
-The Supervisor Agent is the central routing authority. It receives the current request and recent chat history, decides which specialist agents to invoke, and synthesizes their outputs. The Validator reviews that synthesis; valid outputs are returned to the user, while incomplete or unsafe outputs are routed back to the Supervisor with feedback. The retry limit is three iterations.
+The Supervisor Agent is the central routing authority. It receives the current request and recent chat history, decides which specialist agents to invoke, and synthesizes their outputs. The Validator reviews that synthesis; valid outputs are returned to the user, while incomplete or unsafe outputs are routed back to the Supervisor with feedback. The router enforces a bounded retry policy to prevent unbounded execution.
 
 
 Implementation note:
 
-- `src/agents/supervisor_agent.py` currently mounts the clinical documents, risk, diagnostic, drug, lab, symptom, and medical imaging specialist tools.
+- `src/agents/supervisor_agent.py` currently integrates the clinical documents, risk, diagnostic, drug, lab, symptom, and medical imaging specialist tools.
 - `Vital Signs Monitoring Agent` is implemented in `src/agents/` and documented in `metadata.json`, with a dedicated vital-sign prediction tool.
 
 ---
 
 ## 7. Specialist Agent and Tool Map
 
-| Specialist agent | Current role | Direct tools |
+| Specialist Agent | Responsibility | Tools |
 |---|---|---|
 | `Clinical Documents EHR Agent` | Reads and summarizes clinical documents, EHR notes, prescriptions, discharge summaries, and reports. | `pdf_medical_rag_tool` |
-| `Medical Imaging Agent` | Interprets uploaded images and radiology-style context. | `analyze_medical_image`, backed by `medical_imaging_analysis_tool_` |
+| `Medical Imaging Agent` | Analyzes uploaded medical images and generates imaging-focused observations. | `analyze_medical_image`, backed by `medical_imaging_analysis_tool_` |
 | `Lab Interpretation Agent` | Interprets lab values and biomarker patterns. | `predict_laboratory_disease_class`, `predict_health_markers_condition` |
 | `Vital Signs Monitoring Agent` | Reviews vitals and physiological instability signals. | `predict_vital_signs_risk_category` |
 | `Drug Recommendation Agent` | Provides medication information and medicine-context lookup. | `medicine_retrieval_tool` |
 | `Risk Assessment Agent` | Flags severity, urgency, red flags, and escalation needs. | LLM reasoning only |
-| `Diagnostic Reasoning Agent` | Produces cautious differential-style clinical reasoning. | LLM reasoning only |
+| `Diagnostic Reasoning Agent` | Produces differential-style clinical reasoning and potential diagnostic considerations for review. | LLM reasoning only |
 | `Symptom Assistance Agent` | Structures symptoms and provides triage-style guidance. | LLM reasoning only |
 | `Validator Agent` / `validator_node` | Validates response quality, grounding, and safety. | LLM validation prompt |
 
@@ -148,7 +148,7 @@ Implementation note:
 Supported input categories:
 
 - free-text clinical questions
-- image uploads for imaging analysis
+- medical image uploads for imaging-focused analysis
 - PDF uploads for report or EHR analysis
 - DOC/DOCX uploads for clinical document workflows
 - session continuation through `run_id`
@@ -167,7 +167,7 @@ Uploaded files are stored in `uploads/`, classified by extension and MIME contex
 | `data/vital_signs_data` | Vital-sign risk prediction tooling |
 | `uploads/` | Clinical document, imaging, and pathology tools |
 
-Data handling rules from the guideline:
+Data management principles:
 
 - keep static data in `data/`
 - document data sources and licence notes
@@ -186,7 +186,7 @@ Trace files:
 - `logs/healthcare_agent_trace.jsonl`
 - `logs/chat_history.jsonl`
 
-Captured evidence:
+Captured telemetry:
 
 - Invoked agents and specialist outputs
 - Router decisions and retry paths
@@ -210,7 +210,7 @@ flowchart TB
 
 Safety controls:
 
-- Supervisor routes to domain-specific specialists instead of forcing one model to answer everything.
+- Supervisor routes requests to domain-specific specialist agents when additional expertise or tool access is required.
 - Specialist prompts avoid definitive diagnosis, unsafe prescription, and emergency-care replacement.
 - Risk assessment flags severity and possible escalation needs.
 - Validator checks relevance, completeness, medical reasonableness, and hallucination risk.
@@ -272,33 +272,14 @@ http://localhost:8000
 
 ---
 
-## 16. Repository Alignment Checklist
+## 16. Operational Notes
 
-| Guideline item | Current status | Action |
-|---|---|---|
-| Healthcare Diagnostics use case | Aligned | `metadata.json` uses `use_case_id = 23`. |
-| Minimum 2 agents | Present | Multiple specialist agents plus Supervisor and Validator. |
-| Meaningful collaboration | Present | Supervisor delegates, Validator reviews, Router retries. |
-| Logs/traces | Present | Runtime traces are written under `logs/`. |
-| Compass/OpenAI-compatible model calls | Present | Model settings are read from environment variables. |
-| API on port 8000 | Present | `run.py` starts port `8000`. |
-| README | Present | Documents setup, runtime, API usage, data, and examples. |
-| Architecture doc | Present | Documents agents, tools, flow, data, and safety. |
-| `.env.example` | Present | Contains sample runtime configuration. |
-| Input/output examples | Present | Examples are stored under `input_examples/` and `output_examples/`. |
-| Data source references | Present | Source references are listed in `metadata.json`. |
-| Secrets | Excluded | Real API keys and credentials are not part of source documentation. |
+The active API contract uses `POST /analyze`. Generated runtime artifacts such as vector databases, uploads, Python caches, and notebook checkpoints are excluded from version control.
 
 ---
 
-## 17. Operational Notes
+## 17. Summary
 
-The active API contract uses `POST /analyze`. Generated runtime artifacts such as vector databases, uploads, Python caches, and notebook checkpoints are excluded from Git so the repository remains lightweight and safe to push.
-
----
-
-## 18. Summary
-
-The system uses a Supervisor-led, LangGraph-orchestrated architecture with specialist healthcare agents, tool-backed data access, a validation loop, and trace logging. This is the right shape for the Agentathon Healthcare Diagnostics challenge because it demonstrates domain-specific delegation, safety review, retry behavior, and traceable multi-agent collaboration.
+The system uses a Supervisor-led, LangGraph-orchestrated architecture with specialist healthcare agents, tool-backed data access, a validation loop, and trace logging. The architecture demonstrates domain-specific delegation, validation-aware routing, traceable multi-agent collaboration, and tool-grounded clinical decision support aligned with the Healthcare Diagnostics use case.
 
 The repository includes documented agents, tool-backed data access, example inputs and outputs, and sample runtime configuration suitable for local execution.

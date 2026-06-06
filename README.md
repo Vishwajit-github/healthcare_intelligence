@@ -26,11 +26,11 @@ While traditional AI systems can generate responses quickly, they often attempt 
 
 ## 💡 What This System Does
 
-The **Healthcare Multi-Agent Clinical Intelligence System** addresses these challenges by introducing a specialist-driven clinical workflow.
+The **Healthcare Multi-Agent Clinical Intelligence System** By combining these specialists under a coordinated supervisor workflow, the system produces structured clinical decision-support outputs that combine specialist-agent reasoning, tool-derived evidence, and validation feedback..
 
 Instead of relying on a single AI model, the system distributes reasoning across dedicated healthcare agents, each responsible for a specific clinical domain. A central **Clinical Supervisor Agent** coordinates the workflow, while a structured validation process ensures consistency and safety in the returned response.
 
-This approach mirrors real clinical reasoning workflows:
+This architecture is inspired by multidisciplinary clinical review workflows:
 
 - 🤒 **Symptom Assistance Agent** analyzes patient-reported symptoms and clinical presentation  
 - ⚠️ **Risk Assessment Agent** identifies red flags and escalation requirements  
@@ -41,13 +41,13 @@ This approach mirrors real clinical reasoning workflows:
 - 📄 **Clinical Documents EHR Agent** extracts insights from clinical notes, EHR data, and reports  
 - ❤️ **Vital Signs Monitoring Agent** tracks physiological indicators such as oxygen saturation, blood pressure, and heart rate  
 
-By combining these specialists under a coordinated supervisor workflow, the system produces structured, transparent, and clinically meaningful intelligence.
+By combining these specialists under a coordinated supervisor workflow, the system produces structured clinical decision-support outputs that combine specialist-agent reasoning, tool-derived evidence, and validation feedback.
 
 ---
 
-## 🚀 Why It’s Different from a Standard LLM
+## 🚀 Multi-Agent Clinical Intelligence Approach
 
-Unlike a single-model healthcare chatbot, this system:
+The system is designed as a multi-agent clinical reasoning architecture with the following characteristics:
 
 - 🧠 Uses **specialized clinical agents instead of one general model**  
 - 🔍 Grounds responses in **retrieved clinical context and structured medical inputs**  
@@ -58,7 +58,7 @@ Unlike a single-model healthcare chatbot, this system:
 - 🔄 Uses a **supervisor-driven orchestration workflow instead of a single reasoning chain**  
 
 ---
-## 👥 Who This Helps
+## 👥 Intended Users
 
 This system is designed to support:
 
@@ -70,15 +70,15 @@ This system is designed to support:
 - ⚕️ **Risk management and patient safety teams** identifying early warning signals  
 - 🤖 **AI healthcare product teams** building clinical intelligence applications  
 ---
-## 🎯 Outcome
+## 🎯 System Objectives
 
-The result is a healthcare AI system that is:
+The system is designed to provide:
 
-- Faster than manual clinical synthesis  
-- More structured than a general medical chatbot  
-- More reliable than single-model reasoning systems  
-- More traceable for clinical review and auditing  
-- Designed for real-world healthcare decision support workflows  
+- Structured clinical information synthesis
+- Traceable specialist-agent reasoning
+- Tool-grounded clinical interpretation
+- Reviewable outputs for healthcare workflows
+- 
 ---
 
 ## 2. Use Case ID
@@ -106,6 +106,14 @@ Core capabilities:
 - Session continuity through `run_id`
 - Logs and traces under `logs/`
 
+### Core Architectural Characteristics
+
+- Supervisor-driven multi-agent orchestration using LangGraph
+- Specialist healthcare agents operating on domain-specific clinical tasks
+- Tool-augmented reasoning through predictive models and retrieval systems
+- Validator-based response quality and safety assessment
+- Support for structured and unstructured clinical data, including laboratory findings, imaging inputs, vital signs, and clinical documents
+- Session-aware execution with traceable agent interactions
 ---
 
 ## 4. Agent Architecture
@@ -125,7 +133,7 @@ Agent roles:
 | `Diagnostic Reasoning Agent` | Produces cautious differential-style clinical reasoning. |
 | `Lab Interpretation Agent` | Interprets lab values, biomarkers, and abnormal clinical tests. |
 | `Vital Signs Monitoring Agent` | Reviews vital signs and physiological instability patterns. |
-| `Medical Imaging Agent` | Supports image and radiology-style interpretation. |
+| `Medical Imaging Agent` | Analyzes uploaded medical images and generates imaging-focused observations. |
 | `Drug Recommendation Agent` | Provides medicine information and medication-support context. |
 | `Clinical Documents EHR Agent` | Processes clinical PDFs, EHR notes, prescriptions, and discharge summaries. |
 | `Validator Agent` | Reviews output quality, grounding, completeness, and safety. |
@@ -134,7 +142,7 @@ Agent roles:
 
 ## 5. Agent Collaboration Flow
 
-The system is not a single one-shot LLM call. It uses a LangGraph workflow with validation-aware routing and retry behavior.
+The system uses a LangGraph workflow with validation-aware routing and retry behavior.
 
 ![Multi-Agentic Workflow](images/langgraph_workflow.png)
 
@@ -359,7 +367,7 @@ curl http://localhost:8000/health
 
 ### `POST /analyze`
 
-Main healthcare analysis endpoint. It accepts multipart form fields.
+Primary clinical intelligence analysis endpoint. It accepts multipart form fields.
 
 Required:
 
