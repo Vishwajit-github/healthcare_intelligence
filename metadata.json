@@ -1,0 +1,58 @@
+{
+    "use_case_id": "23",
+    "agents": [
+        {
+            "name": "Supervisor Agent",
+            "role": "Coordinates the overall clinical workflow, interprets the incoming case context, and decides which specialist agents should be engaged. It manages agent handoffs, collects intermediate findings, and prepares a coherent state for validation."
+        },
+        {
+            "name": "Symptom Assistance Agent",
+            "role": "Structures patient-reported symptoms, history, duration, and associated context into a clinically readable summary. It provides cautious triage-style guidance while avoiding definitive diagnosis or treatment claims."
+        },
+        {
+            "name": "Risk Assessment Agent",
+            "role": "Evaluates severity, urgency, red flags, and escalation signals from the available symptoms, vitals, labs, and clinical context. It highlights when clinician review, emergency care, or closer monitoring may be needed."
+        },
+        {
+            "name": "Diagnostic Reasoning Agent",
+            "role": "Generates cautious differential-style reasoning by mapping symptoms, labs, vitals, and documents to possible clinical patterns. It explains uncertainty, competing possibilities, and evidence gaps rather than presenting an autonomous diagnosis."
+        },
+        {
+            "name": "Lab Interpretation Agent",
+            "role": "Interprets laboratory values, biomarkers, and abnormal test results against expected clinical ranges and contextual signals. It identifies notable abnormalities, possible implications, and where additional tests or clinician review may be appropriate."
+        },
+        {
+            "name": "Vital Signs Monitoring Agent",
+            "role": "Analyzes vital signs such as temperature, pulse, blood pressure, respiration, and oxygen saturation for abnormal physiological patterns. It flags instability, trend concerns, and risk categories that should influence triage or monitoring."
+        },
+        {
+            "name": "Medical Imaging Agent",
+            "role": "Reviews uploaded medical images or radiology-style inputs and extracts structured observations for the rest of the workflow. It frames findings as decision-support signals and recommends professional radiology review where needed."
+        },
+        {
+            "name": "Drug Recommendation Agent",
+            "role": "Retrieves and summarizes medication-related information, including common uses, possible side effects, and treatment-support context. It avoids prescribing decisions and clearly positions medication output as clinician-reviewed guidance."
+        },
+        {
+            "name": "Clinical Documents EHR Agent",
+            "role": "Processes clinical PDFs, prescriptions, EHR notes, discharge summaries, and other healthcare documents to extract relevant medical context. It turns unstructured records into structured facts that downstream agents can reason over."
+        },
+        {
+            "name": "Validator Agent",
+            "role": "Reviews specialist outputs for completeness, grounding, consistency, safety, and responsible clinical framing before final response generation. It can trigger revision when outputs are vague, unsafe, unsupported, or missing required caveats."
+        }
+    ],
+    "tools_used": [
+        "langgraph",
+        "langchain",
+        "fastapi",
+        "compass-api",
+        "custom-medical-tools"
+    ],
+    "data_sources": [
+        "https://www.kaggle.com/datasets/pareshbadnore/diagnostic-pathology-test-results",
+        "https://www.kaggle.com/datasets/klingill/laboratory-data",
+        "https://www.kaggle.com/datasets/aadyasingh55/drug-dataset"
+    ],
+    "output_type": "text"
+}

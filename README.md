@@ -1,0 +1,583 @@
+# Healthcare Multi-Agent Clinical Intelligence System
+
+**G42 Agentathon | Healthcare Diagnostics | Multi-Agent Clinical Decision Support, Clinical Reasoning, Risk Assessment, Medical Interpretation, and Clinical Documentation Analysis**
+
+This repository implements a healthcare-focused multi-agent AI system that accepts symptoms, clinical notes, laboratory findings, medical records, imaging inputs, and drug-related context, routes the work to specialist agents, validates the result, and returns a structured clinical intelligence response.
+
+> ⚠️ Safety note: this project is a clinical decision-support prototype. It is not a replacement for qualified healthcare professionals.
+
+---
+
+## 🩺 1. Problem Statement
+
+Healthcare decision-making is complex, data-heavy, and rarely driven by a single source of information. A seemingly simple request such as **"Why is this patient's oxygen level dropping?"** can quickly expand into multiple interconnected clinical investigations involving **symptoms, laboratory findings, imaging results, medication history, and prior medical records**.
+
+Healthcare professionals operate in environments where **accuracy, timeliness, and patient safety** are critical. Every day, they must synthesize fragmented clinical data while identifying risks, prioritizing urgent conditions, and ensuring no critical signals are missed.
+
+While traditional AI systems can generate responses quickly, they often attempt to handle all reasoning in a single pass. This creates several challenges:
+
+- Limited transparency into **clinical reasoning steps**  
+- Difficulty validating **medical conclusions**  
+- Reduced traceability across **symptoms, labs, and imaging**  
+- Challenges processing **heterogeneous medical documents**  
+- Increased risk of missing **critical risk signals or contraindications**
+
+---
+
+## 💡 What This System Does
+
+The **Healthcare Multi-Agent Clinical Intelligence System** addresses these challenges by introducing a specialist-driven clinical workflow.
+
+Instead of relying on a single AI model, the system distributes reasoning across dedicated healthcare agents, each responsible for a specific clinical domain. A central **Clinical Supervisor Agent** coordinates the workflow, while a structured validation process ensures consistency and safety before final output.
+
+This approach mirrors real clinical reasoning workflows:
+
+- 🤒 **Symptom Assistance Agent** analyzes patient-reported symptoms and clinical presentation  
+- ⚠️ **Risk Assessment Agent** identifies red flags and escalation requirements  
+- 🧠 **Diagnostic Reasoning Agent** generates clinical hypotheses and differential reasoning  
+- 🧪 **Lab Interpretation Agent** evaluates laboratory results and biomarkers  
+- 🩻 **Medical Imaging Agent** interprets radiology and imaging findings  
+- 💊 **Drug Recommendation Agent** analyzes medications and potential interactions  
+- 📄 **Clinical Documents EHR Agent** extracts insights from clinical notes, EHR data, and reports  
+- ❤️ **Vital Signs Monitoring Agent** (available in repository) tracks physiological indicators such as oxygen saturation, blood pressure, and heart rate  
+
+By combining these specialists under a coordinated supervisor workflow, the system produces structured, transparent, and clinically meaningful intelligence.
+
+---
+
+## 🚀 Why It’s Different from a Standard LLM
+
+Unlike a single-model healthcare chatbot, this system:
+
+- 🧠 Uses **specialized clinical agents instead of one general model**  
+- 🔍 Grounds responses in **retrieved clinical context and structured medical inputs**  
+- ⚖️ Applies **multi-agent validation across clinical reasoning outputs**  
+- 📄 Handles **large medical documents via Clinical Documents EHR Agent with PDF ingestion support**  
+- 🩻 Supports **multi-modal clinical inputs including labs, imaging, vitals, and EHR data**  
+- 🧾 Produces **traceable and review-ready clinical intelligence outputs**  
+- 🔄 Uses a **supervisor-driven orchestration workflow instead of a single reasoning chain**  
+
+---
+## 👥 Who This Helps
+
+This system is designed to support:
+
+- 🏥 **Clinicians and healthcare providers** in supporting diagnosis and patient review workflows  
+- 🧪 **Hospital clinical decision-support teams** handling triage and case analysis  
+- 📊 **Healthcare analytics teams** working with large-scale patient and medical datasets  
+- 🧠 **Medical AI researchers** developing clinical reasoning and multi-agent systems  
+- 📝 **Healthcare documentation teams** summarizing EHRs, discharge notes, and reports  
+- ⚕️ **Risk management and patient safety teams** identifying early warning signals  
+- 🤖 **AI healthcare product teams** building clinical intelligence applications  
+---
+## 🎯 Outcome
+
+The result is a healthcare AI system that is:
+
+- Faster than manual clinical synthesis  
+- More structured than a general medical chatbot  
+- More reliable than single-model reasoning systems  
+- More traceable for clinical review and auditing  
+- Designed for real-world healthcare decision support workflows  
+---
+
+## 2. Use Case ID
+
+- Intended Agentathon use case: `23`
+- Use case name: Healthcare Diagnostics
+- Domain: Healthcare / Life Sciences
+- Difficulty: Very High
+
+Implementation note: the Agentathon guideline lists Healthcare Diagnostics as Use Case `23`. Before final submission, make sure `metadata.json` uses the same `use_case_id` so README, metadata, architecture, and submission form are aligned.
+
+---
+
+## 3. Solution Overview
+
+The system exposes a FastAPI application on port `8000`. A user submits a healthcare query, optionally with an uploaded medical file. The API builds a LangGraph state, sends the case to a Supervisor Agent, routes work to relevant healthcare specialist agents, validates the generated response, and returns a final clinical decision-support response.
+
+Core capabilities:
+
+- Clinical question analysis through `POST /analyze`
+- Optional upload support for images, PDFs, DOC/DOCX files, and text-like documents
+- LangGraph orchestration with supervisor and validator nodes
+- Specialist agents for symptoms, risk, diagnostics, labs, vitals, imaging, medications, and clinical documents
+- Tool-backed retrieval and prediction for medicine data, lab classification, health markers, vital signs, imaging, and document processing
+- Session continuity through `run_id`
+- Logs and traces under `logs/`
+
+---
+
+## 4. Agent Architecture
+
+The architecture is supervisor-centered. The Supervisor Agent receives the user case and decides which specialist agents should be called.
+
+
+```mermaid
+flowchart TB
+    User[User Query / Uploaded File] --> API[FastAPI app.py]
+    API --> State[LangGraph HealthcareState]
+    State --> Supervisor[Supervisor Agent]
+
+    Supervisor --> Symptom[Symptom Assistance Agent]
+    Supervisor --> Risk[Risk Assessment Agent]
+    Supervisor --> Diagnostic[Diagnostic Reasoning Agent]
+    Supervisor --> Lab[Lab Interpretation Agent]
+    Supervisor --> Imaging[Medical Imaging Agent]
+    Supervisor --> Drug[Drug Recommendation Agent]
+    Supervisor --> ClinicalDocs[Clinical Documents EHR Agent]
+    Supervisor -. available in repo .-> Vitals[Vital Signs Monitoring Agent]
+
+    ClinicalDocs --> PdfTool[pdf_medical_rag_tool]
+    Imaging --> ImageTool[medical_imaging_analysis_tool_]
+    Drug --> MedicineTool[medicine_retrieval_tool]
+    Lab --> LabDiseaseTool[predict_laboratory_disease_class]
+    Lab --> HealthMarkerTool[predict_health_markers_condition]
+    Vitals --> VitalTool[predict_vital_signs_risk_category]
+
+    Symptom --> Validator[Validator Agent / Validator Node]
+    Risk --> Validator
+    Diagnostic --> Validator
+    Lab --> Validator
+    Imaging --> Validator
+    Drug --> Validator
+    ClinicalDocs --> Validator
+    Vitals --> Validator
+```
+
+Agent roles:
+
+| Agent | Role |
+|---|---|
+| `Supervisor Agent` | Coordinates workflow execution, routes tasks, and synthesizes specialist outputs. |
+| `Symptom Assistance Agent` | Structures symptoms and provides triage-style symptom support. |
+| `Risk Assessment Agent` | Flags severity, red flags, urgency, and escalation needs. |
+| `Diagnostic Reasoning Agent` | Produces cautious differential-style clinical reasoning. |
+| `Lab Interpretation Agent` | Interprets lab values, biomarkers, and abnormal clinical tests. |
+| `Vital Signs Monitoring Agent` | Reviews vital signs and physiological instability patterns. |
+| `Medical Imaging Agent` | Supports image and radiology-style interpretation. |
+| `Drug Recommendation Agent` | Provides medicine information and medication-support context. |
+| `Clinical Documents EHR Agent` | Processes clinical PDFs, EHR notes, prescriptions, and discharge summaries. |
+| `Validator Agent` | Reviews output quality, grounding, completeness, and safety. |
+
+---
+
+## 5. Agent Collaboration Flow
+
+The system is not a single one-shot LLM call. It uses a LangGraph workflow with validation-aware routing and retry behavior.
+
+```mermaid
+stateDiagram-v2
+    [*] --> supervisor
+    supervisor --> validator
+    validator --> end: valid output
+    validator --> supervisor: invalid output and retry budget remains
+    validator --> end: max retry count reached
+    end --> [*]
+```
+
+Runtime flow:
+
+1. FastAPI receives `user_query`, optional `run_id`, and optional uploaded file.
+2. Uploaded files are saved under `uploads/`.
+3. The API builds a `HealthcareState` with query, messages, file metadata, chat history, and empty output fields.
+4. LangGraph starts at the supervisor node.
+5. The Supervisor Agent delegates to relevant specialist agents.
+6. Specialist agents may call domain tools and return structured outputs.
+7. The validator checks the response for quality, safety, and medical coherence.
+8. The router either ends the run or sends the case back to the Supervisor for refinement.
+9. The API returns the final response, validation critique, and agent outputs.
+
+---
+
+## 6. Tools, Frameworks, and Models Used
+
+Frameworks and libraries:
+
+- FastAPI
+- Uvicorn
+- LangGraph
+- LangChain
+- OpenAI-compatible client through `langchain-openai`
+- Pydantic
+- Python dotenv
+- Pandas
+- scikit-learn
+- Pillow
+- PyPDF / PyPDF2
+- OpenTelemetry libraries
+
+Model configuration:
+
+- Chat model: configured in `config/llm.py`
+- Default model: `gpt-5.1`
+- Embedding model: `text-embedding-3-large`
+- Base URL: OpenAI-compatible Compass/Core42 endpoint from environment variables
+
+Custom tools:
+
+| Tool | Purpose |
+|---|---|
+| `pdf_medical_rag_tool` | Clinical document and PDF analysis. |
+| `medical_imaging_analysis_tool_` | Uploaded image interpretation support. |
+| `medicine_retrieval_tool` | Medicine data retrieval. |
+| `predict_laboratory_disease_class` | Lab disease classification support. |
+| `predict_health_markers_condition` | Health marker prediction support. |
+| `predict_vital_signs_risk_category` | Vital signs risk prediction support. |
+| `pathology_slide_analysis_tool` | Pathology slide analysis support. |
+
+---
+
+## 7. Data Sources
+
+Static data is stored under `data/`:
+
+```text
+data/
+├── disease_classification_data/
+│   ├── health_markers_dataset.csv
+│   └── laboratory__data.csv
+├── drugs_effect_details/
+│   └── drugs_cleaned_dataset.xls
+├── medicine_data/
+│   ├── Medicine_Details.csv
+│   └── medicine_details_embedding_corpus.txt
+└── vital_signs_data/
+    └── human_vital_signs_dataset_2024.csv
+```
+
+Data handling rules:
+
+- Do not include private, sensitive, or restricted patient data.
+- Keep static data lightweight enough for standard CPU execution.
+- Use public, anonymized, synthetic, or otherwise permitted datasets only.
+- Add source and license notes for each dataset before final submission.
+- Do not commit credentials, API keys, or private medical records.
+
+---
+
+## 8. Repository Structure
+
+```text
+healthcare_ai_repo/
+├── app.py                         # FastAPI app, upload handling, graph execution
+├── run.py                         # Starts API server on port 8000
+├── metadata.json                  # Agentathon metadata
+├── requirements.txt               # Python dependencies
+├── README.md                      # Project instructions
+├── ARCHITECTURE.md                # Detailed architecture notes
+├── .env.example                   # Runtime environment template
+├── config/
+│   └── llm.py                     # LLM and embeddings configuration
+├── graph/
+│   ├── builder.py                 # LangGraph workflow definition
+│   ├── state.py                   # Workflow state schema
+│   └── nodes/
+│       ├── supervisor_node.py     # Supervisor workflow node
+│       ├── validator_node.py      # Validation workflow node
+│       └── router.py              # Conditional route after validation
+├── src/
+│   ├── agents/                    # Supervisor and specialist agents
+│   ├── tools/                     # Medical tools and prediction helpers
+│   └── utils/                     # Logging, tracing, and shared helpers
+├── prompts/                       # Agent and validator prompts
+├── data/                          # Static healthcare datasets
+├── logs/                          # Run logs and trace evidence
+├── scripts/                       # Utility scripts
+├── examples/                      # Example files placeholder
+└── uploads/                       # Runtime upload storage
+```
+
+---
+
+## 9. Environment Variables
+
+The LLM configuration is loaded by `config/llm.py`.
+
+Required for live LLM execution:
+
+```bash
+OPENAI_API_KEY=your-api-key-here
+OPENAI_BASE_URL=https://api.core42.ai/v1
+OPENAI_MODEL=gpt-5.1
+OPENAI_EMBEDDING_MODEL=text-embedding-3-large
+```
+
+Basic app settings from `.env.example`:
+
+```bash
+APP_ENV=development
+LOG_LEVEL=INFO
+API_HOST=127.0.0.1
+API_PORT=8000
+```
+
+Never commit real values for `OPENAI_API_KEY` or other secrets.
+
+---
+
+## 10. Setup Instructions
+
+Create a virtual environment:
+
+```bash
+python -m venv .venv
+```
+
+Activate it:
+
+```bash
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Configure `.env.example` with the model endpoint, model name, embedding model, and API key expected by `config/llm.py`.
+
+---
+
+## 11. How to Run Locally
+
+Start the API server:
+
+```bash
+python run.py
+```
+
+The API runs at:
+
+```text
+http://localhost:8000
+```
+
+Check health:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "healthy"
+}
+```
+
+---
+
+## 12. How to Run with Docker
+
+Docker support is not currently present because this repository does not currently include a `Dockerfile`.
+
+Recommended final-submission action:
+
+1. Add a `Dockerfile`.
+2. Build the image.
+3. Run the container on port `8000`.
+4. Inject API keys and model settings through environment variables.
+
+Expected commands after Docker support is added:
+
+```bash
+docker build -t healthcare-ai-agent .
+```
+
+```bash
+docker run --rm \
+  -p 8000:8000 \
+  -e OPENAI_API_KEY=your-api-key-here \
+  -e OPENAI_BASE_URL=https://api.core42.ai/v1 \
+  -e OPENAI_MODEL=gpt-5.1 \
+  healthcare-ai-agent
+```
+
+---
+
+## 13. API Usage
+
+### `GET /`
+
+Returns basic service status.
+
+```bash
+curl http://localhost:8000/
+```
+
+### `GET /health`
+
+Returns health status.
+
+```bash
+curl http://localhost:8000/health
+```
+
+### `POST /analyze`
+
+Main healthcare analysis endpoint. It accepts multipart form fields.
+
+Required:
+
+- `user_query`
+
+Optional:
+
+- `run_id`
+- `file`
+
+Example without file:
+
+```bash
+curl -X POST http://localhost:8000/analyze \
+  -F "user_query=Patient has fever, cough, low oxygen saturation, and elevated CRP. Provide a cautious clinical interpretation."
+```
+
+Example with file:
+
+```bash
+curl -X POST http://localhost:8000/analyze \
+  -F "user_query=Review this uploaded clinical report and summarize key risks." \
+  -F "file=@/path/to/report.pdf"
+```
+
+### `POST /debug`
+
+Returns detailed graph output for debugging.
+
+```bash
+curl -X POST http://localhost:8000/debug \
+  -F "user_query=Assess headache, fever, neck stiffness, and confusion."
+```
+
+### `GET /history/{run_id}`
+
+Returns stored chat history for a session.
+
+```bash
+curl http://localhost:8000/history/<run_id>
+```
+
+Note: this repo currently uses `POST /analyze` as the main endpoint. If the final Agentathon validator requires `POST /run`, add a compatibility wrapper before submission.
+
+---
+
+## 14. Input and Output Examples
+
+### Example Input
+
+```bash
+curl -X POST http://localhost:8000/analyze \
+  -F "user_query=Patient reports chest pain, shortness of breath, dizziness, and high blood pressure. Provide a cautious triage-oriented interpretation."
+```
+
+### Example Output Shape
+
+```json
+{
+  "request_id": "uuid",
+  "run_id": "uuid",
+  "status": "success",
+  "final_response": "Structured clinical decision-support response with caveats.",
+  "critique": {
+    "is_valid": true,
+    "risk_level": "moderate",
+    "reason": "Response is clinically cautious and includes escalation advice."
+  },
+  "task_outputs": {
+    "Risk Assessment Agent": {
+      "input": "Patient reports chest pain, shortness of breath...",
+      "output": "Risk-focused assessment..."
+    },
+    "Diagnostic Reasoning Agent": {
+      "input": "Clinical context...",
+      "output": "Differential-style interpretation..."
+    }
+  }
+}
+```
+
+Recommended final-submission action: add at least three concrete input examples and three matching output examples under `examples/` or dedicated `input_examples/` and `output_examples/` folders.
+
+---
+
+## 15. Logs and Traces
+
+The application writes trace and run artifacts under `logs/`:
+
+```text
+logs/
+├── healthcare_ai.json
+├── all_runs.txt
+├── all_runs.json
+└── all_runs.jsonl
+```
+
+Logs are used to demonstrate:
+
+- supervisor routing decisions
+- specialist-agent activity
+- validator output
+- retry or final routing decisions
+- tool call start/end/error events
+- graph execution history
+
+Do not commit logs containing private patient data, API keys, or sensitive uploaded-file content.
+
+---
+
+## 16. Demo Video
+
+Demo video link:
+
+```text
+TBD - add final demo video URL before submission.
+```
+
+Suggested demo flow:
+
+1. Start the API locally.
+2. Show health check on port `8000`.
+3. Submit a healthcare case to `POST /analyze`.
+4. Show the final response.
+5. Show logs/traces proving multi-agent collaboration.
+6. Explain safety boundaries and known limitations.
+
+---
+
+## 17. Known Limitations
+
+- `metadata.json` should be aligned to Healthcare Diagnostics Use Case `23` before final submission.
+- The current API uses `POST /analyze`; add `POST /run` if strict Agentathon validation requires it.
+- Docker support is not currently present.
+- Three formal input/output example pairs are not currently present.
+- Dataset source and license notes should be made explicit.
+- Uploaded-file and state field naming should be reviewed for consistency.
+- Outputs are clinical decision-support only and require qualified clinician review.
+
+---
+
+## 18. Future Improvements
+
+- Add a `POST /run` compatibility endpoint.
+- Add a Dockerfile and container smoke test.
+- Add at least three input examples and three output examples.
+- Align `metadata.json` with Use Case `23`.
+- Add dataset source and license documentation.
+- Add automated tests for `/health`, `/analyze`, validation routing, and tool calls.
+- Add richer trace visualization for agent handoffs and tool execution.
+- Add stronger PHI redaction and upload validation.
+- Add deployment guidance for the final Compass runtime environment.
+
+---
+
+## Related Documentation
+
+- `ARCHITECTURE.md`
+- `metadata.json`
+- `app.py`
+- `graph/builder.py`
+- `config/llm.py`
