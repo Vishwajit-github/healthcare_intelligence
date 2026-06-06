@@ -26,7 +26,7 @@ While traditional AI systems can generate responses quickly, they often attempt 
 
 ## 💡 What This System Does
 
-The **Healthcare Multi-Agent Clinical Intelligence System** By combining these specialists under a coordinated supervisor workflow, the system produces structured clinical decision-support outputs that combine specialist-agent reasoning, tool-derived evidence, and validation feedback..
+The **Healthcare Multi-Agent Clinical Intelligence System**  integrates multiple specialist agents under a coordinated supervisor workflow to generate structured clinical decision-support outputs, combining domain-specific reasoning, tool-based evidence, and validation feedback.
 
 Instead of relying on a single AI model, the system distributes reasoning across dedicated healthcare agents, each responsible for a specific clinical domain. A central **Clinical Supervisor Agent** coordinates the workflow, while a structured validation process ensures consistency and safety in the returned response.
 
