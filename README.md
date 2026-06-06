@@ -78,7 +78,7 @@ The system is designed to provide:
 - Traceable specialist-agent reasoning
 - Tool-grounded clinical interpretation
 - Reviewable outputs for healthcare workflows
-- 
+
 ---
 
 ## 2. Use Case ID
