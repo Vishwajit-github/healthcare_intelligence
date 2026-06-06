@@ -2,7 +2,7 @@
 
 ## 1. Architecture Purpose
 
-This document describes the architecture of the Healthcare Multi-Agent AI system for the G42 Agentathon Healthcare Diagnostics use case. It is written to make the agent collaboration, routing decisions, tools, data flow, validation loop, and submission-readiness gaps clear for reviewers and future maintainers.
+This document describes the architecture of the Healthcare Multi-Agent AI system for the G42 Agentathon Healthcare Diagnostics use case. It covers agent collaboration, routing decisions, tools, data flow, validation, and runtime configuration.
 
 The system is a clinical decision-support prototype. It accepts a healthcare query and optional medical file, builds a LangGraph state, lets a Supervisor Agent delegate work to specialist healthcare agents, validates the output, and returns a cautious final response.
 
@@ -15,54 +15,17 @@ The system is a clinical decision-support prototype. It accepts a healthcare que
 The Agentathon guideline for Healthcare Diagnostics is:
 
 - Use case: Healthcare Diagnostics
-- Recommended `use_case_id`: `23`
+- `use_case_id`: `23`
 - Domain: Healthcare / Life Sciences
 - Difficulty: Very High
 - Required emphasis: responsible clinical decision support, not autonomous diagnosis or treatment
 - Expected outputs: structured symptom summary, differential diagnosis candidates, risk flags, suggested next diagnostic steps, and safety caveats
 
-General Agentathon requirements reflected in this architecture:
-
-- minimum two agents with clearly defined roles
-- meaningful agent collaboration, not only a linear prompt chain
-- logs or traces proving agent-to-agent interaction
-- model calls through Compass or an OpenAI-compatible Compass endpoint
-- documented agents, roles, tools, and data sources
-- API server on port `8000`
-- credentials kept out of source code
-
-Current repository alignment note:
-
-- The architecture and project domain align to Healthcare Diagnostics, which the guideline lists as `use_case_id = 23`.
-- The current `metadata.json` should be checked before final submission because it currently declares `use_case_id = 1`.
-- The current API exposes `POST /analyze`; if a strict validator expects `POST /run`, add a compatibility endpoint or document the deviation clearly.
-
 ---
 
-## 3. System Context
+## 3. High-Level System Architecture
 
-```mermaid
-flowchart LR
-    User[Clinician / Analyst / Evaluator] --> API[FastAPI API Layer<br/>app.py]
-
-    API --> Uploads[uploads/<br/>Runtime medical files]
-    API --> History[Session History<br/>run_id]
-    API --> State[LangGraph HealthcareState]
-
-    State --> Graph[LangGraph Workflow<br/>graph/builder.py]
-    Graph --> Supervisor[Supervisor Agent]
-    Supervisor --> Specialists[Specialist Healthcare Agents]
-    Specialists --> Validator[Validator Agent / Validator Node]
-    Validator --> Router[Validation Router]
-
-    Router -->|valid| Response[Final Clinical Response]
-    Router -->|invalid and retry budget remains| Supervisor
-    Router -->|max retries| Response
-
-    Specialists --> Logs[logs/<br/>agent, node, tool traces]
-    Validator --> Logs
-    Router --> Logs
-```
+![High-Level Healthcare AI Architecture](images/healthcare_ai_architecture.png)
 
 The API layer owns request intake and file handling. LangGraph owns workflow state and routing. The Supervisor Agent owns delegation. Specialist agents own domain analysis. The Validator Node owns safety and quality review before the final response is returned.
 
@@ -87,48 +50,28 @@ The API layer owns request intake and file handling. LangGraph owns workflow sta
 
 ## 5. Main Request Flow
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant U as User / Evaluator
-    participant A as FastAPI app.py
-    participant S as HealthcareState
-    participant G as LangGraph
-    participant Sup as Supervisor Agent
-    participant Spec as Specialist Agents
-    participant Val as ValidatorNode
-    participant R as Router
-    participant L as logs/
+![Request Flow](images/request_flow.png)
 
-    U->>A: POST /analyze with user_query, optional run_id, optional file
-    A->>A: Save uploaded file to uploads/ when provided
-    A->>S: Build state with query, file metadata, history, outputs, validation fields
-    S->>G: graph.ainvoke(initial_state)
-    G->>Sup: supervisor_node invokes Supervisor Agent
-    Sup->>Spec: Delegates to relevant specialist agents
-    Spec-->>Sup: Domain-specific findings and tool-backed outputs
-    Sup->>L: Write node / agent trace events
-    Sup-->>G: supervisor_output + agent_outputs
-    G->>Val: validator_node reviews response and outputs
-    Val->>L: Write validation trace
-    Val-->>R: is_valid, risk_level, reason, fix_needed
-    R-->>G: END or retry supervisor
-    G-->>A: Final graph result
-    A-->>U: HealthcareResponse JSON
-```
+1. FastAPI receives `user_query`, optional `run_id`, and optional uploaded file.
+2. The API saves uploaded files under `uploads/` and builds the initial `HealthcareState`.
+3. LangGraph invokes the Supervisor Agent.
+4. The Supervisor delegates to relevant specialist agents.
+5. Specialist outputs return to the Supervisor for synthesis.
+6. The Validator reviews the synthesized response for safety, completeness, and grounding.
+7. The Router either ends the run or sends the case back to the Supervisor for refinement.
+8. The API returns the final response, validation output, and specialist outputs.
 
 ---
 
 ## 6. Supervisor-Centered Agent Topology
 
-The Supervisor Agent is the central routing authority. It receives the merged current request and recent chat history, then decides which specialist agents should be invoked.
+The Supervisor Agent is the central routing authority. It receives the current request and recent chat history, decides which specialist agents to invoke, and synthesizes their outputs. The Validator reviews that synthesis; valid outputs are returned to the user, while incomplete or unsafe outputs are routed back to the Supervisor with feedback. The retry limit is three iterations.
 
-![Multi-Agentic Workflow](images/healthcare_ai_architecture.png)
 
 Implementation note:
 
 - `src/agents/supervisor_agent.py` currently mounts the clinical documents, risk, diagnostic, drug, lab, symptom, and medical imaging specialist tools.
-- `Vital Signs Monitoring Agent` exists in `src/agents/` and `metadata.json`, and it has a vital-sign prediction tool. If the final architecture claim is that the Supervisor has access to every listed specialist, add the vital signs agent to the Supervisor tool list before submission.
+- `Vital Signs Monitoring Agent` is implemented in `src/agents/` and documented in `metadata.json`, with a dedicated vital-sign prediction tool.
 
 ---
 
@@ -154,7 +97,15 @@ This topology satisfies the guideline expectation for dynamic delegation, role s
 
 The active graph is compact but non-linear because validation can route back to the Supervisor.
 
-![LangGraph Workflow](images/langgraph_flow.png)
+```mermaid
+flowchart TB
+    Start([Start]) --> Supervisor[Supervisor Node]
+    Supervisor --> Validator[Validator Node]
+    Validator --> Router{Validation Router}
+    Router -->|valid| End([End])
+    Router -->|invalid and retries remain| Supervisor
+    Router -->|max retries reached| End
+```
 
 The graph is defined in `graph/builder.py`:
 
@@ -178,58 +129,21 @@ The router decision is defined in `graph/nodes/router.py`:
 
 The workflow state carries request context, session context, agent outputs, and validation information.
 
-```mermaid
-classDiagram
-    class HealthcareState {
-      user_query: str
-      messages: List[Dict]
-      run_id: Optional[str]
-      uploaded_file_path: Optional[str]
-      uploaded_file_type: Optional[str]
-      uploaded_file_mime_type: Optional[str]
-      supervisor_output: Optional[str]
-      validation_result: Optional[Dict]
-      validation_risk_level: Optional[str]
-      is_valid: bool
-      iteration: int
-      final_response: Optional[str]
-      used_agents: List[str]
-      agent_outputs: Dict
-      chat_history: List[Dict]
-    }
-```
+Key state fields:
+
+- User and session context: `user_query`, `messages`, `run_id`, `chat_history`
+- Uploaded file context: `uploaded_file_path`, `uploaded_file_type`, `uploaded_file_mime_type`
+- Agent execution context: `supervisor_output`, `used_agents`, `agent_outputs`
+- Validation and response context: `validation_result`, `validation_risk_level`, `is_valid`, `iteration`, `final_response`
 
 Implementation note:
 
 - `app.py` initializes unified uploaded-file fields: `uploaded_file_path`, `uploaded_file_type`, and `uploaded_file_mime_type`.
-- `graph/state.py` still contains some legacy image-specific field names. Aligning these state names is recommended before final submission.
+- `graph/state.py` carries the shared runtime fields used by graph nodes during execution.
 
 ---
 
 ## 10. Input and File Processing
-
-```mermaid
-flowchart LR
-    Request[POST /analyze] --> Form[user_query + run_id]
-    Request --> File{Optional file?}
-
-    File -->|No| StateOnly[Build state from text + history]
-    File -->|Yes| Save[Save file to uploads/]
-    Save --> Detect[Detect file type by extension]
-
-    Detect --> Image[image: png/jpg/jpeg/webp]
-    Detect --> PDF[pdf]
-    Detect --> Doc[doc/docx]
-    Detect --> Text[text/other]
-
-    Image --> State[HealthcareState]
-    PDF --> State
-    Doc --> State
-    Text --> State
-    Form --> State
-
-    State --> Graph[LangGraph workflow]
-```
 
 Supported input categories:
 
@@ -239,39 +153,19 @@ Supported input categories:
 - DOC/DOCX uploads for clinical document workflows
 - session continuation through `run_id`
 
+Uploaded files are stored in `uploads/`, classified by extension and MIME context, and attached to `HealthcareState` for downstream specialist tools.
+
 ---
 
 ## 11. Data and Retrieval Architecture
 
-```mermaid
-flowchart TB
-    subgraph StaticData[data/]
-      Medicine[medicine_data]
-      DrugEffects[drugs_effect_details]
-      Disease[disease_classification_data]
-      Vitals[vital_signs_data]
-    end
-
-    subgraph Tools[src/tools/]
-      MedicineSearch[medicine_vector_search_tool]
-      ClinicalRAG[clinical_notes_ehr_tool]
-      ImagingTool[medical_imaging_tool]
-      DrugTool[drug_recommendation_tool]
-      VitalTool[vital_signs_prediction_tool]
-      MarkerTool[health_markers_prediction_tool]
-      LabTool[laboratory_multiclass_prediction_tool]
-      PathologyTool[pathology_slide_analysis_tool]
-    end
-
-    Medicine --> MedicineSearch
-    DrugEffects --> DrugTool
-    Disease --> MarkerTool
-    Disease --> LabTool
-    Vitals --> VitalTool
-    Uploads[uploads/] --> ClinicalRAG
-    Uploads --> ImagingTool
-    Uploads --> PathologyTool
-```
+| Data area | Used by |
+|---|---|
+| `data/medicine_data` | `medicine_vector_search_tool` |
+| `data/drugs_effect_details` | Drug-related support tools |
+| `data/disease_classification_data` | Lab and health-marker prediction tools |
+| `data/vital_signs_data` | Vital-sign risk prediction tooling |
+| `uploads/` | Clinical document, imaging, and pathology tools |
 
 Data handling rules from the guideline:
 
@@ -285,34 +179,20 @@ Data handling rules from the guideline:
 
 ## 12. Observability and Trace Evidence
 
-The architecture includes traceability at several levels.
+The system writes trace events for graph execution, agent activity, routing decisions, validator results, tool calls, latency, and runtime status.
 
-```mermaid
-flowchart LR
-    NodeStart[trace_node_start] --> NodeEnd[trace_node_end]
-    AgentStart[agent trace start] --> AgentEnd[agent trace end]
-    ToolStart[tool_call_start] --> ToolEnd[tool_call_end]
-    ToolError[tool_call_error] --> Logs[logs/]
-    NodeEnd --> Logs
-    AgentEnd --> Logs
-    Router[router routing_decision] --> Logs
-```
+Trace files:
 
-Trace and logging locations:
+- `logs/healthcare_agent_trace.jsonl`
+- `logs/chat_history.jsonl`
 
-- `logs/all_runs.jsonl`
-- `logs/all_runs.json`
-- `logs/all_runs.txt`
-- `logs/healthcare_ai.json`
+Captured evidence:
 
-Important logged evidence for judging:
-
-- which agent was invoked
-- what routing decision was made
-- what validator result was produced
-- whether a retry or final route was selected
-- tool start/end/error events where wrapped tools are used
-- latency and status metadata where available
+- Invoked agents and specialist outputs
+- Router decisions and retry paths
+- Validator result, risk level, and feedback
+- Tool start, end, and error events
+- Latency and status metadata where available
 
 ---
 
@@ -331,10 +211,10 @@ flowchart TB
 Safety controls:
 
 - Supervisor routes to domain-specific specialists instead of forcing one model to answer everything.
-- Specialist prompts should avoid definitive diagnosis, unsafe prescription, and emergency-care replacement.
+- Specialist prompts avoid definitive diagnosis, unsafe prescription, and emergency-care replacement.
 - Risk assessment flags severity and possible escalation needs.
 - Validator checks relevance, completeness, medical reasonableness, and hallucination risk.
-- Final response should preserve uncertainty and remind users to seek qualified clinical review.
+- Final response preserves uncertainty and reminds users to seek qualified clinical review.
 
 ---
 
@@ -392,38 +272,28 @@ http://localhost:8000
 
 ---
 
-## 16. Submission Readiness Checklist
+## 16. Repository Alignment Checklist
 
 | Guideline item | Current status | Action |
 |---|---|---|
-| Healthcare Diagnostics use case | Architecture aligns to Healthcare Diagnostics | Set `metadata.json` to `use_case_id = 23` if submitting this use case. |
-| Minimum 2 agents | Yes | Keep roles documented in README and metadata. |
-| Meaningful collaboration | Yes | Supervisor delegates, Validator reviews, Router retries. |
-| Logs/traces | Yes | Keep logs in `logs/` and remove sensitive data. |
-| Compass/OpenAI-compatible model calls | Yes | Ensure final runtime uses approved Compass endpoint and env vars. |
-| API on port 8000 | Yes | `run.py` starts port `8000`. |
-| Standard `/run` endpoint | Not currently present | Add `/run` wrapper if required by final validator. |
-| README | Present | Keep aligned with final code. |
-| Architecture doc | Present | This file documents agents, tools, flow, data, and safety. |
-| `.env.example` | Present | Ensure it has placeholders only. |
-| Input/output examples | Not clearly present | Add at least 3 input and 3 output examples before final submission. |
-| Dockerfile | Not currently present | Add if required for final submission. |
-| Data source/license notes | Partial | Add explicit source and licence notes for all files in `data/`. |
-| Secrets | Must remain absent | Do not commit real Compass or API keys. |
+| Healthcare Diagnostics use case | Aligned | `metadata.json` uses `use_case_id = 23`. |
+| Minimum 2 agents | Present | Multiple specialist agents plus Supervisor and Validator. |
+| Meaningful collaboration | Present | Supervisor delegates, Validator reviews, Router retries. |
+| Logs/traces | Present | Runtime traces are written under `logs/`. |
+| Compass/OpenAI-compatible model calls | Present | Model settings are read from environment variables. |
+| API on port 8000 | Present | `run.py` starts port `8000`. |
+| README | Present | Documents setup, runtime, API usage, data, and examples. |
+| Architecture doc | Present | Documents agents, tools, flow, data, and safety. |
+| `.env.example` | Present | Contains sample runtime configuration. |
+| Input/output examples | Present | Examples are stored under `input_examples/` and `output_examples/`. |
+| Data source references | Present | Source references are listed in `metadata.json`. |
+| Secrets | Excluded | Real API keys and credentials are not part of source documentation. |
 
 ---
 
-## 17. Known Architecture Gaps To Close
+## 17. Operational Notes
 
-These items are important because they affect whether documentation and implementation tell the same story:
-
-1. Align `metadata.json` with Healthcare Diagnostics by using `use_case_id = 23`.
-2. Add `Vital Signs Monitoring Agent` to the Supervisor tool list if the final system should route directly to every listed specialist.
-3. Add a `POST /run` compatibility endpoint if the final evaluator requires the starter contract.
-4. Add at least three request examples and three output examples.
-5. Add or update Docker support if final deployment requires container validation.
-6. Align `graph/state.py` field names with the unified uploaded-file fields initialized in `app.py`.
-7. Document data source and licence notes for all static datasets under `data/`.
+The active API contract uses `POST /analyze`. Generated runtime artifacts such as vector databases, uploads, Python caches, and notebook checkpoints are excluded from Git so the repository remains lightweight and safe to push.
 
 ---
 
@@ -431,4 +301,4 @@ These items are important because they affect whether documentation and implemen
 
 The system uses a Supervisor-led, LangGraph-orchestrated architecture with specialist healthcare agents, tool-backed data access, a validation loop, and trace logging. This is the right shape for the Agentathon Healthcare Diagnostics challenge because it demonstrates domain-specific delegation, safety review, retry behavior, and traceable multi-agent collaboration.
 
-Before final submission, the most important work is to align metadata with Use Case `23`, expose any required standard endpoint, include examples, and ensure the Supervisor tool list matches the documented final agent set.
+The repository includes documented agents, tool-backed data access, example inputs and outputs, and sample runtime configuration suitable for local execution.

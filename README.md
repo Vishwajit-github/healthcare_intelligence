@@ -28,7 +28,7 @@ While traditional AI systems can generate responses quickly, they often attempt 
 
 The **Healthcare Multi-Agent Clinical Intelligence System** addresses these challenges by introducing a specialist-driven clinical workflow.
 
-Instead of relying on a single AI model, the system distributes reasoning across dedicated healthcare agents, each responsible for a specific clinical domain. A central **Clinical Supervisor Agent** coordinates the workflow, while a structured validation process ensures consistency and safety before final output.
+Instead of relying on a single AI model, the system distributes reasoning across dedicated healthcare agents, each responsible for a specific clinical domain. A central **Clinical Supervisor Agent** coordinates the workflow, while a structured validation process ensures consistency and safety in the returned response.
 
 This approach mirrors real clinical reasoning workflows:
 
@@ -39,7 +39,7 @@ This approach mirrors real clinical reasoning workflows:
 - 🩻 **Medical Imaging Agent** interprets radiology and imaging findings  
 - 💊 **Drug Recommendation Agent** analyzes medications and potential interactions  
 - 📄 **Clinical Documents EHR Agent** extracts insights from clinical notes, EHR data, and reports  
-- ❤️ **Vital Signs Monitoring Agent** (available in repository) tracks physiological indicators such as oxygen saturation, blood pressure, and heart rate  
+- ❤️ **Vital Signs Monitoring Agent** tracks physiological indicators such as oxygen saturation, blood pressure, and heart rate  
 
 By combining these specialists under a coordinated supervisor workflow, the system produces structured, transparent, and clinically meaningful intelligence.
 
@@ -88,7 +88,7 @@ The result is a healthcare AI system that is:
 - Domain: Healthcare / Life Sciences
 - Difficulty: Very High
 
-Implementation note: the Agentathon guideline lists Healthcare Diagnostics as Use Case `23`. Before final submission, make sure `metadata.json` uses the same `use_case_id` so README, metadata, architecture, and submission form are aligned.
+The project metadata uses Healthcare Diagnostics Use Case `23`, matching the repository domain and architecture.
 
 ---
 
@@ -110,40 +110,10 @@ Core capabilities:
 
 ## 4. Agent Architecture
 
-The architecture is supervisor-centered. The Supervisor Agent receives the user case and decides which specialist agents should be called.
+The architecture is supervisor-centered. The Supervisor Agent receives the user case and decides which specialist agents to call.
 
 
-```mermaid
-flowchart TB
-    User[User Query / Uploaded File] --> API[FastAPI app.py]
-    API --> State[LangGraph HealthcareState]
-    State --> Supervisor[Supervisor Agent]
-
-    Supervisor --> Symptom[Symptom Assistance Agent]
-    Supervisor --> Risk[Risk Assessment Agent]
-    Supervisor --> Diagnostic[Diagnostic Reasoning Agent]
-    Supervisor --> Lab[Lab Interpretation Agent]
-    Supervisor --> Imaging[Medical Imaging Agent]
-    Supervisor --> Drug[Drug Recommendation Agent]
-    Supervisor --> ClinicalDocs[Clinical Documents EHR Agent]
-    Supervisor -. available in repo .-> Vitals[Vital Signs Monitoring Agent]
-
-    ClinicalDocs --> PdfTool[pdf_medical_rag_tool]
-    Imaging --> ImageTool[medical_imaging_analysis_tool_]
-    Drug --> MedicineTool[medicine_retrieval_tool]
-    Lab --> LabDiseaseTool[predict_laboratory_disease_class]
-    Lab --> HealthMarkerTool[predict_health_markers_condition]
-    Vitals --> VitalTool[predict_vital_signs_risk_category]
-
-    Symptom --> Validator[Validator Agent / Validator Node]
-    Risk --> Validator
-    Diagnostic --> Validator
-    Lab --> Validator
-    Imaging --> Validator
-    Drug --> Validator
-    ClinicalDocs --> Validator
-    Vitals --> Validator
-```
+![Multi-Agentic Workflow](images/readme_architecture.png)
 
 Agent roles:
 
@@ -166,15 +136,7 @@ Agent roles:
 
 The system is not a single one-shot LLM call. It uses a LangGraph workflow with validation-aware routing and retry behavior.
 
-```mermaid
-stateDiagram-v2
-    [*] --> supervisor
-    supervisor --> validator
-    validator --> end: valid output
-    validator --> supervisor: invalid output and retry budget remains
-    validator --> end: max retry count reached
-    end --> [*]
-```
+![Multi-Agentic Workflow](images/langgraph_workflow.png)
 
 Runtime flow:
 
@@ -251,7 +213,7 @@ Data handling rules:
 - Do not include private, sensitive, or restricted patient data.
 - Keep static data lightweight enough for standard CPU execution.
 - Use public, anonymized, synthetic, or otherwise permitted datasets only.
-- Add source and license notes for each dataset before final submission.
+- Data source references are listed in `metadata.json`.
 - Do not commit credentials, API keys, or private medical records.
 
 ---
@@ -284,7 +246,8 @@ healthcare_ai_repo/
 ├── data/                          # Static healthcare datasets
 ├── logs/                          # Run logs and trace evidence
 ├── scripts/                       # Utility scripts
-├── examples/                      # Example files placeholder
+├── input_examples/                # Sample request payloads
+├── output_examples/               # Sample response payloads
 └── uploads/                       # Runtime upload storage
 ```
 
@@ -370,31 +333,9 @@ Expected response:
 
 ---
 
-## 12. How to Run with Docker
+## 12. Runtime Notes
 
-Docker support is not currently present because this repository does not currently include a `Dockerfile`.
-
-Recommended final-submission action:
-
-1. Add a `Dockerfile`.
-2. Build the image.
-3. Run the container on port `8000`.
-4. Inject API keys and model settings through environment variables.
-
-Expected commands after Docker support is added:
-
-```bash
-docker build -t healthcare-ai-agent .
-```
-
-```bash
-docker run --rm \
-  -p 8000:8000 \
-  -e OPENAI_API_KEY=your-api-key-here \
-  -e OPENAI_BASE_URL=https://api.core42.ai/v1 \
-  -e OPENAI_MODEL=gpt-5.1 \
-  healthcare-ai-agent
-```
+This repository is configured for local FastAPI execution through `python run.py`. Runtime settings are provided through `.env.example`, and generated runtime artifacts such as vector databases and uploads are excluded from Git.
 
 ---
 
@@ -461,7 +402,7 @@ Returns stored chat history for a session.
 curl http://localhost:8000/history/<run_id>
 ```
 
-Note: this repo currently uses `POST /analyze` as the main endpoint. If the final Agentathon validator requires `POST /run`, add a compatibility wrapper before submission.
+The main analysis endpoint is `POST /analyze`.
 
 ---
 
@@ -500,7 +441,7 @@ curl -X POST http://localhost:8000/analyze \
 }
 ```
 
-Recommended final-submission action: add at least three concrete input examples and three matching output examples under `examples/` or dedicated `input_examples/` and `output_examples/` folders.
+Additional sample request and response payloads are available under `input_examples/` and `output_examples/`.
 
 ---
 
@@ -529,15 +470,7 @@ Do not commit logs containing private patient data, API keys, or sensitive uploa
 
 ---
 
-## 16. Demo Video
-
-Demo video link:
-
-```text
-TBD - add final demo video URL before submission.
-```
-
-Suggested demo flow:
+## 16. Demo Flow
 
 1. Start the API locally.
 2. Show health check on port `8000`.
@@ -550,27 +483,19 @@ Suggested demo flow:
 
 ## 17. Known Limitations
 
-- `metadata.json` should be aligned to Healthcare Diagnostics Use Case `23` before final submission.
-- The current API uses `POST /analyze`; add `POST /run` if strict Agentathon validation requires it.
-- Docker support is not currently present.
-- Three formal input/output example pairs are not currently present.
-- Dataset source and license notes should be made explicit.
-- Uploaded-file and state field naming should be reviewed for consistency.
+- The API uses `POST /analyze` as the primary analysis endpoint.
+- Docker packaging is outside the current repository scope.
+- Uploaded-file handling supports common clinical document and image formats, with behavior dependent on the relevant specialist tool.
 - Outputs are clinical decision-support only and require qualified clinician review.
 
 ---
 
-## 18. Future Improvements
+## 18. Extension Areas
 
-- Add a `POST /run` compatibility endpoint.
-- Add a Dockerfile and container smoke test.
-- Add at least three input examples and three output examples.
-- Align `metadata.json` with Use Case `23`.
-- Add dataset source and license documentation.
-- Add automated tests for `/health`, `/analyze`, validation routing, and tool calls.
-- Add richer trace visualization for agent handoffs and tool execution.
-- Add stronger PHI redaction and upload validation.
-- Add deployment guidance for the final Compass runtime environment.
+- Container packaging and smoke tests.
+- Automated tests for `/health`, `/analyze`, validation routing, and tool calls.
+- Richer trace visualization for agent handoffs and tool execution.
+- Stronger PHI redaction and upload validation.
 
 ---
 
