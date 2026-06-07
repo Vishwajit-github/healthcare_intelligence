@@ -28,6 +28,8 @@ def risk_assessment_agent(clinical_context: str, action: str) -> str:
     - treatment planning
     """
     print("\nCalling Agent: Risk Assessment Agent")
+    print(f"INPUT TO RISK ASSESSMENT AGENT:\n{clinical_context}")
+
   
     result = risk_assessment_specialist.invoke(
         {

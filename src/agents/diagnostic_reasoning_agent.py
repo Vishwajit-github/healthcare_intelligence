@@ -35,6 +35,8 @@ def diagnostic_syndrome_reasoning_agent(clinical_context: str, action: str) -> s
     """
 
     print("\nCalling Agent: Diagnostic Reasoning Specialist")
+    print(f"INPUT TO DIAGNOSTIC REASONING SPECIALIST:\n{clinical_context}")
+
  
     result = diagnostic_reasoning_specialist.invoke(
         {

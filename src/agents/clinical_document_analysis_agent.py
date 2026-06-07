@@ -61,6 +61,9 @@ def clinical_documents_ehr_agent(
     """
     print("\nCalling Agent: Clinical Notes/EHR Agent")
     
+    print(f"INPUT TO CLINICAL NOTES/EHR AGENT:\nclinical_input={clinical_input}")
+    
+    
     prompt = f"""
 Clinical input:
 {clinical_input}

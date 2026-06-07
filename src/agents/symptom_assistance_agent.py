@@ -28,6 +28,7 @@ def symptom_assistance_agent(symptoms: str, action: str) -> str:
     - replacing emergency care
     """
     print("\nCalling Agent: Symptom Assistance Agent")
+    print(f"INPUT TO SYMPTOM ASSISTANCE AGENT:\n{symptoms}")
 
     result = symptom_assistance_specialist.invoke(
         {

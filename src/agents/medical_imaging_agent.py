@@ -144,6 +144,9 @@ def medical_imaging_agent(
     """
 
     print("\nCalling Agent: Medical Imaging Specialist")
+
+    print(f"INPUT TO MEDICAL IMAGING SPECIALIST:\n{image_context}")
+
   
     result = medical_imaging_specialist.invoke(
         {

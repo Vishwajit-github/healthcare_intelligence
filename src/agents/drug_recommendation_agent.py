@@ -50,6 +50,8 @@ def drug_recommendation_agent(clinical_context: str, action: str) -> str:
 """
     
     print("\nCalling Agent: Drug Recommendation Agent")
+    print(f"INPUT TO DRUG RECOMMENDATION AGENT:\n{clinical_context}")
+
    
     result = drug_recommendation_specialist.invoke(
         {
