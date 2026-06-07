@@ -98,7 +98,7 @@ The system exposes a FastAPI application on port `8000`. A user submits a health
 
 Core capabilities:
 
-- Clinical question analysis through `POST /analyze`
+- Clinical question analysis through `POST /run`
 - Optional upload support for images, PDFs, DOC/DOCX files, and text-like documents
 - LangGraph orchestration with supervisor and validator nodes
 - Specialist agents for symptoms, risk, diagnostics, labs, vitals, imaging, medications, and clinical documents
@@ -365,7 +365,7 @@ Returns health status.
 curl http://localhost:8000/health
 ```
 
-### `POST /analyze`
+### `POST /run`
 
 Primary clinical intelligence analysis endpoint. It accepts multipart form fields.
 
@@ -381,14 +381,14 @@ Optional:
 Example without file:
 
 ```bash
-curl -X POST http://localhost:8000/analyze \
+curl -X POST http://localhost:8000/run \
   -F "user_query=Patient has fever, cough, low oxygen saturation, and elevated CRP. Provide a cautious clinical interpretation."
 ```
 
 Example with file:
 
 ```bash
-curl -X POST http://localhost:8000/analyze \
+curl -X POST http://localhost:8000/run \
   -F "user_query=Review this uploaded clinical report and summarize key risks." \
   -F "file=@/path/to/report.pdf"
 ```
@@ -410,7 +410,7 @@ Returns stored chat history for a session.
 curl http://localhost:8000/history/<run_id>
 ```
 
-The main analysis endpoint is `POST /analyze`.
+The main analysis endpoint is `POST /run`.
 
 ---
 
@@ -419,7 +419,7 @@ The main analysis endpoint is `POST /analyze`.
 ### Example Input
 
 ```bash
-curl -X POST http://localhost:8000/analyze \
+curl -X POST http://localhost:8000/run \
   -F "user_query=Patient reports chest pain, shortness of breath, dizziness, and high blood pressure. Provide a cautious triage-oriented interpretation."
 ```
 
@@ -482,7 +482,7 @@ Do not commit logs containing private patient data, API keys, or sensitive uploa
 
 1. Start the API locally.
 2. Show health check on port `8000`.
-3. Submit a healthcare case to `POST /analyze`.
+3. Submit a healthcare case to `POST /run`.
 4. Show the final response.
 5. Show logs/traces proving multi-agent collaboration.
 6. Explain safety boundaries and known limitations.
@@ -491,17 +491,16 @@ Do not commit logs containing private patient data, API keys, or sensitive uploa
 
 ## 17. Known Limitations
 
-- The API uses `POST /analyze` as the primary analysis endpoint.
-- Docker packaging is outside the current repository scope.
-- Uploaded-file handling supports common clinical document and image formats, with behavior dependent on the relevant specialist tool.
-- Outputs are clinical decision-support only and require qualified clinician review.
+- The current repository focuses on application functionality and multi-agent orchestration; containerized deployment (e.g., Docker) is not included within the present scope.
+- Uploaded document and image processing support common healthcare file formats. The quality and depth of analysis may vary depending on document structure, image quality, extracted content, and the capabilities of the relevant specialist agents and tools.
+- The system is intended solely as a clinical decision-support solution. All outputs are generated to assist healthcare workflows and should not be considered medical diagnoses, or a substitute for professional clinical judgment.
 
 ---
 
 ## 18. Extension Areas
 
 - Container packaging and smoke tests.
-- Automated tests for `/health`, `/analyze`, validation routing, and tool calls.
+- Automated tests for `/health`, `/run`, validation routing, and tool calls.
 - Richer trace visualization for agent handoffs and tool execution.
 - Stronger PHI redaction and upload validation.
 

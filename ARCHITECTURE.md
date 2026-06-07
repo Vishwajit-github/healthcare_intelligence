@@ -36,7 +36,7 @@ The API layer owns request intake and file handling. LangGraph owns workflow sta
 | Component | File | Responsibility |
 |---|---|---|
 | API server launcher | `run.py` | Starts Uvicorn on port `8000`. |
-| FastAPI app | `app.py` | Defines `/`, `/health`, `/analyze`, `/debug`, and `/history/{run_id}`. |
+| FastAPI app | `app.py` | Defines `/`, `/health`, `/run`, `/debug`, and `/history/{run_id}`. |
 | Graph builder | `graph/builder.py` | Builds and compiles the active LangGraph workflow. |
 | Graph state | `graph/state.py` | Defines shared state passed between nodes. |
 | Supervisor node | `graph/nodes/supervisor_node.py` | Invokes the Supervisor Agent and collects specialist outputs. |
@@ -224,20 +224,20 @@ Safety controls:
 |---|---|---|
 | `/` | `GET` | Basic service status. |
 | `/health` | `GET` | Health check. |
-| `/analyze` | `POST` | Main healthcare analysis endpoint. Accepts multipart form fields. |
+| `/run` | `POST` | Main healthcare analysis endpoint. Accepts multipart form fields. |
 | `/debug` | `POST` | Returns detailed graph output for debugging. |
 | `/history/{run_id}` | `GET` | Returns chat/session history for a run. |
 
-Current main request format for `/analyze`:
+Current main request format for `/run`:
 
 ```bash
-curl -X POST http://localhost:8000/analyze   -F "user_query=Patient has fever, cough, low oxygen saturation, and elevated CRP. Provide a cautious clinical interpretation."   -F "run_id=optional-existing-session-id"
+curl -X POST http://localhost:8000/run   -F "user_query=Patient has fever, cough, low oxygen saturation, and elevated CRP. Provide a cautious clinical interpretation."   -F "run_id=optional-existing-session-id"
 ```
 
 Optional file upload:
 
 ```bash
-curl -X POST http://localhost:8000/analyze   -F "user_query=Review this report and summarize risks."   -F "file=@/path/to/report.pdf"
+curl -X POST http://localhost:8000/run   -F "user_query=Review this report and summarize risks."   -F "file=@/path/to/report.pdf"
 ```
 
 ---
@@ -274,7 +274,7 @@ http://localhost:8000
 
 ## 16. Operational Notes
 
-The active API contract uses `POST /analyze`. Generated runtime artifacts such as vector databases, uploads, Python caches, and notebook checkpoints are excluded from version control.
+The active API contract uses `POST /run`. Generated runtime artifacts such as vector databases, uploads, Python caches, and notebook checkpoints are excluded from version control.
 
 ---
 
