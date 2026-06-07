@@ -132,6 +132,7 @@ def build_medicine_vector_db(clean_db: bool = False) -> Path:
 
     documents = load_medicine_documents()
 
+    print("\nThis will take around 3 minutes, please wait.")
     print("\nCreating medicine vector database...")
     vectorstore = Chroma.from_documents(
         documents=documents,

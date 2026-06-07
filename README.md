@@ -289,16 +289,17 @@ Never commit real values for `OPENAI_API_KEY` or other secrets.
 
 ## 10. Setup Instructions
 
-Create a virtual environment:
+From the parent directory, change into the project folder:
 
 ```bash
-python -m venv .venv
+cd healthcare_intelligence
 ```
 
-Activate it:
+Create and activate a virtual environment:
 
 ```bash
-source .venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 ```
 
 Install dependencies:
